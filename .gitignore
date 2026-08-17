@@ -1,0 +1,21 @@
+# Generated reports
+*-dirstat.html
+report.html
+*.dirstat.html
+
+# Python
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+.venv/
+
+# Agent context, kept local: working notes, not contributor documentation
+CLAUDE.md
+CLAUDE.local.md
+
+# Editors
+.vscode/
+.idea/
+*.swp

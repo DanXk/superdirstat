@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "superdirstat"
+version = "1.0.0"
+description = "WinDirStat for Linux: one command, one self-contained HTML disk usage report"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { file = "LICENSE" }
+keywords = ["disk-usage", "treemap", "windirstat", "ncdu", "du", "visualization"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Filesystems",
+    "Topic :: System :: Monitoring",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/DanXk/superdirstat"
+Issues = "https://github.com/DanXk/superdirstat/issues"
+
+[project.scripts]
+superdirstat = "superdirstat:main"
+
+[tool.setuptools]
+py-modules = ["superdirstat"]
