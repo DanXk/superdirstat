@@ -10,6 +10,10 @@ You get one self-contained HTML report — a squarified treemap with cushion sha
 to a synchronised file tree — that you can open with `file://`, keep, or email. No
 server, no build step, no dependencies.
 
+It scales to a whole server: **12.1 million files over 3.35 TiB, scanned in 105 seconds
+into a 1.6 MiB report** — about 115,000 files a second, with no index, no daemon and
+nothing left running afterwards.
+
 ![superdirstat report of /usr](docs/screenshot-light.jpg)
 
 ## Why this exists
@@ -120,10 +124,19 @@ On a busy server, cold cache excluded:
 | --- | --- | --- | --- |
 | 221k files, 9 GiB | 2.1 s | 1.9 MiB | 37 ms |
 | 1.26M files, 87 GiB | 13.1 s | 2.0 MiB | 40 ms |
+| 12.1M files, 3.35 TiB | 105.6 s | 1.6 MiB | not measured |
 
-Memory during the scan is roughly 400 MB at two million files, since the whole tree is
-held before pruning. `--min-file 65536` aggregates during the walk if you need to go
-further.
+That works out at 115,000 files a second, or 136,000 directory entries counting folders,
+from a single process with no threads: one `readdir` batch per directory and one `stat`
+per entry, which is the least the sizes can be known from. Tools that thread the walk
+overlap those same calls and can beat it on wall clock; this one buys its speed by not
+doing anything else. The last row was scanned on a different machine, so its render time
+is missing; it holds fewer nodes than the row above it, which bounds it.
+
+**Memory is the limit to watch, not time.** The whole tree is held before pruning, at
+roughly 300 bytes per entry — 65 MB for 220,000 entries, and close to 4 GB for the 14.4
+million of that 3.35 TiB scan. `--min-file 65536` aggregates small files during the walk
+when that does not fit, at the cost of detail on them.
 
 ## Tests
 
