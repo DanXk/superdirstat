@@ -85,6 +85,8 @@ sudo ./superdirstat.py / root.html
 - **Theme and language** — light or dark, English or French, both remembered. The
   language selector rewrites the interface only; nothing is re-scanned.
 
+![the right-click menu on a file, listing the commands it copies](docs/screenshot-menu.jpg)
+
 ![the same report, dark theme](docs/screenshot-dark.jpg)
 
 ## Things worth knowing
