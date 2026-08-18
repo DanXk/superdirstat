@@ -74,6 +74,10 @@ sudo ./superdirstat.py / root.html
   outlines the matching rectangles; hovering a *folder* outlines its whole region.
 - **File types panel** — every extension with its size and file count. Click one and
   the rest of the map fades out, leaving only the squares of that type. `Esc` clears it.
+- **Right-click menu** — on a rectangle or a tree row, copies a shell command for that
+  entry: its path, `cd` or `ls -la` on the folder holding it, and for a file, `rm -i --`
+  on it. A folder offers a rescan of itself and a `find` of its largest files instead.
+  Each entry displays the command it copies, and nothing is ever run by the report.
 - **Theme and language** — light or dark, English or French, both remembered. The
   language selector rewrites the interface only; nothing is re-scanned.
 
@@ -130,6 +134,7 @@ The report's JavaScript can be checked without a browser:
 node tests/geometry.js  /tmp/r.html    # exact tiling, proportional areas, hit-testing
 node tests/highlight.js /tmp/r.html    # the type filter, pixel by pixel
 node tests/bench.js     /tmp/r.html    # layout / paint / highlight timings
+node tests/context.js   /tmp/r.html    # the commands the right-click menu copies
 ```
 
 See [tests/README.md](tests/README.md) — in particular the reason those tests compile
@@ -139,8 +144,10 @@ the report with `vm.runInThisContext` and never `eval()`.
 
 - **Linux only.** `st_blocks` and `/proc/self/mountinfo` are the two hard dependencies.
   macOS would need a different mount enumeration; `--apparent` works anywhere.
-- **Read-only by design.** No delete, no move. A tool that draws your disk and a tool
-  that empties it should not be the same binary.
+- **Read-only by design.** No delete, no move — the right-click menu composes commands
+  and puts them on the clipboard, it never executes anything, and only a file is ever
+  offered a delete command. A tool that draws your disk and a tool that empties it should
+  not be the same binary.
 - **A report is a snapshot.** There is no watching, no diffing between two reports yet.
 
 ## License

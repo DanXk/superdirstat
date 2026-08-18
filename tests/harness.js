@@ -30,6 +30,7 @@ const PROBE = ';globalThis.__P = {' +
     ' layout: layout, paintCushion: paintCushion, render: render, zoomTo: zoomTo,' +
     ' dimmedImage: dimmedImage, typeIdOf: typeIdOf, tok: tok, rgbOf: rgbOf,' +
     ' fmt: fmt, setLang: setLang, buildExtList: buildExtList,' +
+    ' shQuote: shQuote, ctxCommands: ctxCommands, ctxTargetOf: ctxTargetOf,' +
     ' rects: function () { return rects; },' +
     ' labels: function () { return labels; },' +
     ' base: function () { return base; },' +

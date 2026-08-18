@@ -35,7 +35,7 @@ import time
 from datetime import datetime
 from html import escape
 
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 # Nodes are compact lists/tuples, to keep the JSON payload small:
 #   file      -> (name, size)                       len 2
@@ -355,6 +355,20 @@ def prune_adaptive(root, total, min_share, max_nodes):
 #   build_report() for the ceiling that motivates it.
 # - Of the counters on the metadata line, only `too_deep` marks data missing from the
 #   map, which is why it alone is painted with the `warn` class.
+# - The context menu copies shell commands, it never runs anything: the report stays a
+#   document. Hence every label is "copy the ... command", and the composed text is
+#   shown under it, so what lands on the clipboard is what was read on screen.
+# - Paths go through `shQuote`, POSIX single-quoting with `'` written as `'\''`. A name
+#   holding a quote, a space or a newline is ordinary on a filesystem, and an unquoted
+#   path would produce a command that fails or, for `rm`, hits the wrong target.
+# - Deletion is offered on files only, and as `rm -i --`. A recursive delete composed by
+#   the tool and one paste from running is the accident this report must not manufacture;
+#   `--` covers names starting with a dash. Folders get `ls`, a rescan and a `find` of
+#   their largest files instead, which is what a treemap actually leaves you wanting.
+# - Aggregate nodes carry a translated label rather than a name, so `pathOf` would invent
+#   a path for them: `ctxTargetOf` returns null and no menu opens.
+# - Escape closes the menu before it clears the type filter or leaves the zoom, the same
+#   most-recent-state-first precedence as the rest of the report.
 TEMPLATE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -573,6 +587,53 @@ canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%
 }
 #tip .p { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; word-break: break-all; }
 #tip .m { color: var(--muted); margin-top: 3px; }
+#ctx {
+    position: fixed;
+    z-index: 30;
+    display: none;
+    min-width: 250px;
+    max-width: 460px;
+    padding: 4px;
+    background: var(--tip-bg);
+    border: 1px solid var(--line);
+    box-shadow: 0 6px 22px var(--tip-shadow);
+    font-size: 12px;
+}
+#ctx .ch {
+    padding: 4px 8px 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#ctx button {
+    display: block;
+    width: 100%;
+    padding: 5px 8px;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+#ctx button:hover, #ctx button:focus { background: var(--hover); outline: none; }
+#ctx button.done { color: var(--accent); }
+#ctx button.warn { color: var(--warn); }
+#ctx button code {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .tools { flex: 0 0 auto; margin-left: auto; display: flex; align-items: center; gap: 8px; }
 #lang, #theme {
     flex: 0 0 auto;
@@ -619,6 +680,7 @@ canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%
     </div>
 </main>
 <div id="tip"></div>
+<div id="ctx"></div>
 <script>
 var D = JSON.parse(/*@@DATA@@*/);
 
@@ -728,7 +790,15 @@ var I18N = {
         hardlinks: function (n) { return plural(n, 'hardlink deduplicated', 'hardlinks deduplicated'); },
         deep: function (n) { return plural(n, 'folder too deep', 'folders too deep'); },
         themeDark: 'Dark theme',
-        themeLight: 'Light theme'
+        themeLight: 'Light theme',
+        ctxPath: 'Copy path',
+        ctxCd: 'Copy cd command',
+        ctxLs: 'Copy ls command',
+        ctxScan: 'Copy rescan command',
+        ctxBig: 'Copy largest-files command',
+        ctxRm: 'Copy delete command',
+        ctxDone: 'copied',
+        ctxFail: 'copy failed'
     },
     fr: {
         locale: 'fr-FR',
@@ -756,7 +826,15 @@ var I18N = {
         hardlinks: function (n) { return plural(n, 'hardlink dédupliqué', 'hardlinks dédupliqués'); },
         deep: function (n) { return plural(n, 'dossier trop profond', 'dossiers trop profonds'); },
         themeDark: 'Thème sombre',
-        themeLight: 'Thème clair'
+        themeLight: 'Thème clair',
+        ctxPath: 'Copier le chemin',
+        ctxCd: 'Copier la commande cd',
+        ctxLs: 'Copier la commande ls',
+        ctxScan: 'Copier la commande de re-scan',
+        ctxBig: 'Copier la commande des plus gros fichiers',
+        ctxRm: 'Copier la commande de suppression',
+        ctxDone: 'copié',
+        ctxFail: 'échec de la copie'
     }
 };
 
@@ -1237,8 +1315,122 @@ canvas.addEventListener('dblclick', function (ev) {
     if (idx.length) zoomTo(idx);
 });
 
+var menu = document.getElementById('ctx');
+var menuTimer = null;
+
+function shQuote(s) {
+    return "'" + s.split("'").join("'\\''") + "'";
+}
+
+function ctxCommands(node, idx) {
+    var full = pathOf(idx);
+    var cut = full.lastIndexOf('/');
+    var dir = isDir(node) ? full : (cut > 0 ? full.slice(0, cut) : '/');
+    var items = [
+        { key: 'ctxPath', text: full },
+        { key: 'ctxCd', text: 'cd ' + shQuote(dir) },
+        { key: 'ctxLs', text: 'ls -la ' + shQuote(dir) }
+    ];
+    if (isDir(node)) {
+        items.push({ key: 'ctxScan', text: 'superdirstat ' + shQuote(full) + ' report.html' });
+        items.push({ key: 'ctxBig', text: 'find ' + shQuote(full) +
+            " -xdev -type f -printf '%s\\t%p\\n' | sort -rn | head -20" });
+    } else {
+        items.push({ key: 'ctxRm', text: 'rm -i -- ' + shQuote(full) });
+    }
+    return items;
+}
+
+function closeCtx() {
+    if (menuTimer) { clearTimeout(menuTimer); menuTimer = null; }
+    menu.style.display = 'none';
+    menu.innerHTML = '';
+    menu._items = null;
+}
+
+function openCtx(x, y, node, idx) {
+    var items = ctxCommands(node, idx);
+    var html = '<div class="ch">' + esc(pathOf(idx)) + '</div>';
+    for (var i = 0; i < items.length; i++) {
+        html += '<button type="button" data-i="' + i + '">' + esc(t(items[i].key)) +
+            '<code>' + esc(items[i].text) + '</code></button>';
+    }
+    closeCtx();
+    menu.innerHTML = html;
+    menu._items = items;
+    menu.style.display = 'block';
+    var w = menu.offsetWidth, h = menu.offsetHeight;
+    menu.style.left = Math.max(4, x + w > innerWidth - 8 ? x - w : x) + 'px';
+    menu.style.top = Math.max(4, y + h > innerHeight - 8 ? y - h : y) + 'px';
+}
+
+function copyText(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    if (ok) { done(true); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); },
+            function () { done(false); });
+        return;
+    }
+    done(false);
+}
+
+function ctxTargetOf(idx) {
+    var node = idx.length ? nodeAt(idx) : D.root;
+    return isAgg(node) ? null : node;
+}
+
+canvas.addEventListener('contextmenu', function (ev) {
+    var r = canvas.getBoundingClientRect();
+    var hit = hitTest(ev.clientX - r.left, ev.clientY - r.top);
+    if (!hit) { closeCtx(); return; }
+    var idx = idxOf(hit);
+    var node = ctxTargetOf(idx);
+    if (!node) { closeCtx(); return; }
+    ev.preventDefault();
+    tip.style.display = 'none';
+    openCtx(ev.clientX, ev.clientY, node, idx);
+});
+
+treePane.addEventListener('contextmenu', function (ev) {
+    var row = ev.target.closest('.row');
+    if (!row) { closeCtx(); return; }
+    var idx = row.dataset.idx ? row.dataset.idx.split('-').map(Number) : [];
+    var node = ctxTargetOf(idx);
+    if (!node) { closeCtx(); return; }
+    ev.preventDefault();
+    openCtx(ev.clientX, ev.clientY, node, idx);
+});
+
+menu.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button');
+    if (!btn || !menu._items) return;
+    var item = menu._items[Number(btn.dataset.i)];
+    copyText(item.text, function (ok) {
+        btn.textContent = t(ok ? 'ctxDone' : 'ctxFail');
+        btn.className = ok ? 'done' : 'warn';
+        menuTimer = setTimeout(closeCtx, 650);
+    });
+});
+
+document.addEventListener('mousedown', function (ev) {
+    if (menu.style.display === 'block' && !menu.contains(ev.target)) closeCtx();
+});
+
+treePane.addEventListener('scroll', closeCtx);
+
 document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
+    if (menu.style.display === 'block') { closeCtx(); return; }
     if (pinnedType !== null) {
         pinnedType = null;
         syncExtSelection();
@@ -1345,6 +1537,7 @@ treePane.addEventListener('dblclick', function (ev) {
 
 var resizeTimer = null;
 addEventListener('resize', function () {
+    closeCtx();
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(render, 120);
 });

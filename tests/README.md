@@ -9,6 +9,7 @@ break and hard to see.
 node geometry.js  /tmp/r.html
 node highlight.js /tmp/r.html
 node bench.js     /tmp/r.html
+node context.js   /tmp/r.html
 ```
 
 Requires Node 14+. Nothing to install.
@@ -19,6 +20,7 @@ Requires Node 14+. Nothing to install.
 | `geometry.js` | The treemap tiles the canvas exactly, areas are proportional, hit-testing agrees with the layout, zoom rebuilds a valid layout |
 | `highlight.js` | The type filter keeps matching pixels byte for byte and fades the rest towards the map background, in both themes and after a zoom |
 | `bench.js` | Timings for layout, the per-pixel cushion loop, a full render, and a highlight |
+| `context.js` | The commands the right-click menu copies, each handed to a real shell, which must resolve it to exactly one argument equal to the intended path |
 
 ## Two things to know before changing the harness
 

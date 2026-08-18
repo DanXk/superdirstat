@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-17
+
+### Added
+
+- Right-clicking a rectangle or a tree row opens a context menu that copies shell
+  commands: the path, `cd` and `ls -la` on the containing folder, and — on a file only —
+  `rm -i --` on it. Folders instead offer a rescan of that subtree and a `find` of their
+  largest files, which is what the treemap leaves you wanting once a region has been
+  pruned. Each entry shows the command it will copy.
+- Paths are POSIX single-quoted, so a name holding a quote, a space or a newline yields a
+  command that resolves to exactly one target. `tests/context.js` asserts this against a
+  real shell for every node in a report.
+
+### Notes
+
+- The report still executes nothing: the menu writes to the clipboard, and running the
+  command remains a deliberate act. Deletion is offered on files only — a recursive
+  delete composed by the tool and one paste from running is not a service.
+
 ## [1.0.0] - 2026-08-17
 
 First public release.
@@ -45,4 +64,5 @@ First public release.
   literal: V8's parser is recursive and gives up past roughly 1400 levels of nesting, at
   a depth that varies with the available stack.
 
+[1.1.0]: https://github.com/DanXk/superdirstat/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DanXk/superdirstat/releases/tag/v1.0.0
