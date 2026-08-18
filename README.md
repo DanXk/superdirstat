@@ -1,6 +1,6 @@
 # superdirstat
 
-WinDirStat for Linux, as a single file that writes a single file.
+WinDirStat alternative for Linux, as a single file that writes a single file.
 
 ```sh
 ./superdirstat.py /usr report.html
