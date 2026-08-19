@@ -16,6 +16,8 @@ All notable changes to this project are documented here. The format follows
 - Paths are POSIX single-quoted, so a name holding a quote, a space or a newline yields a
   command that resolves to exactly one target. `tests/context.js` asserts this against a
   real shell for every node in a report.
+- `--version`, which packaging needs and which reports have always carried in their
+  metadata without the command line being able to say it.
 
 ### Notes
 

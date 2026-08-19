@@ -1685,6 +1685,7 @@ def main():
     parser = argparse.ArgumentParser(
         prog='superdirstat',
         description='Write a self-contained HTML disk usage report (treemap + file tree).')
+    parser.add_argument('--version', action='version', version='superdirstat ' + VERSION)
     parser.add_argument('path', help='directory to scan')
     parser.add_argument('output', nargs='?', help='output HTML file (default: <directory>-dirstat.html)')
     parser.add_argument('--apparent', action='store_true',
