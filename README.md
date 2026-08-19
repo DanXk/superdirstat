@@ -14,7 +14,7 @@ It scales to a whole server: **12.1 million files over 3.35 TiB, scanned in 105 
 into a 1.6 MiB report** — about 115,000 files a second, with no index, no daemon and
 nothing left running afterwards.
 
-![superdirstat report of /usr](docs/screenshot-light.jpg)
+![superdirstat: hovering the map, filtering by file type, zooming, and the right-click menu](docs/demo.gif)
 
 ## Why this exists
 
