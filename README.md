@@ -40,7 +40,7 @@ chmod +x superdirstat.py
 Or, for a `superdirstat` command on your PATH:
 
 ```sh
-pipx install git+https://github.com/DanXk/superdirstat.git
+pipx install superdirstat
 ```
 
 ## Usage
